@@ -89,16 +89,18 @@ public class DroidGap extends Activity {
         
         WebViewReflect.checkCompatibility();
                 
-        if (android.os.Build.VERSION.RELEASE.startsWith("2."))
-        	appView.setWebChromeClient(new EclairClient(this));        	
-        else
-        {        
+        if (android.os.Build.VERSION.RELEASE.startsWith("2.")) {
+        	appView.setWebChromeClient(new EclairClient(this));
+        	//appView.setInitialScale(150);
+        } else
+        {       
         	appView.setWebChromeClient(new GapClient(this));
+        	//appView.setInitialScale(100);
         }
         
         appView.setWebViewClient(new GapViewClient(this));
         
-        appView.setInitialScale(100);
+        
         appView.setVerticalScrollBarEnabled(false);
         
         WebSettings settings = appView.getSettings();

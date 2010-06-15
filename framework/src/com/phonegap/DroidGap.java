@@ -45,7 +45,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings.LayoutAlgorithm;
 import android.widget.LinearLayout;
-import android.os.Build.*;
 
 public class DroidGap extends Activity {
 
@@ -95,10 +94,10 @@ public class DroidGap extends Activity {
 
 		if (android.os.Build.VERSION.RELEASE.startsWith("2.")) {
 			appView.setWebChromeClient(new EclairClient(this));
-			// appView.setInitialScale(150);
+			appView.setInitialScale(150);
 		} else {
 			appView.setWebChromeClient(new GapClient(this));
-			// appView.setInitialScale(100);
+			appView.setInitialScale(100);
 		}
 
 		appView.setWebViewClient(new GapViewClient(this));
@@ -319,7 +318,7 @@ public class DroidGap extends Activity {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			String testUrl = appView.getUrl();
 			appView.goBack();
-			if (appView.getUrl() == testUrl) {
+			if (appView.getUrl().equals(testUrl)) {
 				return super.onKeyDown(keyCode, event);
 			}
 		}

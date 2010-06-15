@@ -317,11 +317,13 @@ public class DroidGap extends Activity {
 
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
-			String testUrl = appView.getUrl();
+			// We overwrite default behaviour to support our own back process
+			appView.loadUrl("javascript:keyEvent.backTrigger()");
+			/*String testUrl = appView.getUrl();
 			appView.goBack();
 			if (appView.getUrl().equals(testUrl)) {
 				return super.onKeyDown(keyCode, event);
-			}
+			}*/
 		}
 
 		if (keyCode == KeyEvent.KEYCODE_MENU) {

@@ -45,6 +45,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebSettings.LayoutAlgorithm;
 import android.widget.LinearLayout;
+import android.os.Build.*;
 
 public class DroidGap extends Activity {
 
@@ -318,7 +319,7 @@ public class DroidGap extends Activity {
 		if (keyCode == KeyEvent.KEYCODE_BACK) {
 			String testUrl = appView.getUrl();
 			appView.goBack();
-			if (appView.getUrl().equals(testUrl)) {
+			if (appView.getUrl() == testUrl) {
 				return super.onKeyDown(keyCode, event);
 			}
 		}

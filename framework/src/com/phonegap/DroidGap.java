@@ -98,7 +98,7 @@ public class DroidGap extends Activity {
 			// appView.setInitialScale(150);
 		} else {
 			appView.setWebChromeClient(new GapClient(this));
-			// appView.setInitialScale(100);
+			appView.setInitialScale(100);
 		}
 
 		appView.setWebViewClient(new GapViewClient(this));

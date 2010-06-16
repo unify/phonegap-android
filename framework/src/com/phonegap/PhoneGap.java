@@ -193,5 +193,12 @@ public class PhoneGap{
         return(tz.getID());
     } 
     
+    /**
+     * Executes native back button
+     */
+    public void nativeBackButton() {
+        DroidGap droidGap = (DroidGap) this.mCtx;
+        droidGap.finish();
+    }
 }
 

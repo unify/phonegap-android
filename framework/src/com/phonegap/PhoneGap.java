@@ -25,15 +25,13 @@ package com.phonegap;
 import java.util.TimeZone;
 
 import android.content.Context;
-import android.content.IntentFilter;
-import android.hardware.SensorManager;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Vibrator;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.webkit.WebView;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
 
 public class PhoneGap{
 	
@@ -76,7 +74,7 @@ public class PhoneGap{
 	
 	public String getPlatform()
 	{
-		return this.platform;
+		return PhoneGap.platform;
 	}
 	
 	public String getUuid()

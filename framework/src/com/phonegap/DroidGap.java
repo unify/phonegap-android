@@ -48,6 +48,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.GeolocationPermissions.Callback;
 import android.webkit.WebSettings.LayoutAlgorithm;
 import android.widget.LinearLayout;
 import android.os.Build.*;
@@ -122,7 +123,7 @@ public class DroidGap extends Activity {
         // Turn on DOM storage!
         WebViewReflect.setDomStorage(settings);
         // Turn off native geolocation object in browser - we use our own :)
-        WebViewReflect.setGeolocationEnabled(settings, false);
+        WebViewReflect.setGeolocationEnabled(settings, true);
         /* Bind the appView object to the gap class methods */
         bindBrowser(appView);
         if(cupcakeStorage != null)
@@ -133,6 +134,10 @@ public class DroidGap extends Activity {
         setContentView(root);                        
     }
 	
+	public void invoke(String origin, boolean allow, boolean remember) {
+
+	}
+	
 	@Override
     public void onConfigurationChanged(Configuration newConfig) {
       //don't reload the current page when the orientation is changed
@@ -142,7 +147,6 @@ public class DroidGap extends Activity {
     private void bindBrowser(WebView appView)
     {
     	gap = new Device(appView, this);
-    	geo = new GeoBroker(appView, this);
     	accel = new AccelBroker(appView, this);
     	launcher = new CameraLauncher(appView, this);
     	mContacts = new ContactManager(appView, this);
@@ -155,7 +159,6 @@ public class DroidGap extends Activity {
     	
     	// This creates the new javascript interfaces for PhoneGap
     	appView.addJavascriptInterface(gap, "DroidGap");
-    	appView.addJavascriptInterface(geo, "Geo");
     	appView.addJavascriptInterface(accel, "Accel");
     	appView.addJavascriptInterface(launcher, "GapCam");
     	appView.addJavascriptInterface(mContacts, "ContactHook");
@@ -170,7 +173,9 @@ public class DroidGap extends Activity {
     	if (android.os.Build.VERSION.RELEASE.startsWith("1."))
     	{
     		cupcakeStorage = new Storage(appView);
+        	geo = new GeoBroker(appView, this);
     		appView.addJavascriptInterface(cupcakeStorage, "droidStorage");
+        	appView.addJavascriptInterface(geo, "Geo");
     	}
     }
            
@@ -270,6 +275,13 @@ public class DroidGap extends Activity {
 		{       
 			// This is a kludgy hack!!!!
 			Log.d(TAG, sourceID + ": Line " + Integer.toString(lineNumber) + " : " + message);              
+		}
+		
+		@Override
+		public void onGeolocationPermissionsShowPrompt(String origin, Callback callback) {
+			// TODO Auto-generated method stub
+			super.onGeolocationPermissionsShowPrompt(origin, callback);
+			callback.invoke(origin, true, false);
 		}
 		
 	}

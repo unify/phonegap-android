@@ -1,3 +1,10 @@
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
+ * 
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
+ */
 package com.phonegap;
 
 import java.io.EOFException;
@@ -55,7 +62,6 @@ public class HttpHandler {
 				if (numread <= 0)
                    	break;
 				out.write(buff, 0, numread);
-				System.out.println("numread" + numread);
 				i++;
 			} while (true);
 			out.flush();

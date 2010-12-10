@@ -12,8 +12,6 @@
       document.getElementById("platform").innerHTML = device.platform;
       document.getElementById("version").innerHTML = device.version;
       document.getElementById("uuid").innerHTML = device.uuid;
-      console.log("Height:" + window.innerHeight);
-	  console.log("Width:" + window.innerWidth);
     }
     
     var getLocation = function() {
@@ -103,7 +101,11 @@
 
 	function get_contacts()
 	{
-		navigator.ContactManager.getAllContacts(count_contacts, fail, null);		
+		var obj = new ContactFindOptions();
+		obj.filter="";
+		obj.multiple=true;
+		obj.limit=5;
+		navigator.service.contacts.find(["displayName", "phoneNumbers", "emails"], count_contacts, fail, obj);
 	}
 
 	function count_contacts(contacts)
@@ -114,9 +116,7 @@
 	function init(){
 		document.addEventListener("touchmove", preventBehavior, false);
 		document.addEventListener("deviceready", deviceInfo, true);		
-	}
-
-	
+	}	
 	
   </script>
   </head>

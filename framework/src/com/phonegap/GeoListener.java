@@ -1,3 +1,10 @@
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
+ * 
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
+ */
 package com.phonegap;
 
 import android.content.Context;
@@ -6,88 +13,110 @@ import android.location.LocationManager;
 import android.webkit.WebView;
 
 public class GeoListener {
-	String id;
-	String successCallback;
+	public static int PERMISSION_DENIED = 1;
+	public static int POSITION_UNAVAILABLE = 2;
+	public static int TIMEOUT = 3;
+
+	String id;							// Listener ID
+	String successCallback;				// 
 	String failCallback;
-    GpsListener mGps; 
-    NetworkListener mNetwork;
-    LocationManager mLocMan;
-    Context mCtx;
-    private WebView mAppView;
+    GpsListener mGps;					// GPS listener
+    NetworkListener mNetwork;			// Network listener
+    LocationManager mLocMan;			// Location manager
+    
+    private GeoBroker broker;			// GeoBroker object
 	
 	int interval;
 	
-	GeoListener(String i, Context ctx, int time, WebView appView)
-	{
-		id = i;
-		interval = time;
-		mCtx = ctx;
-		mGps = null;
-		mNetwork = null;
-		mLocMan = (LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE);
-	
-		if (mLocMan.getProvider(LocationManager.GPS_PROVIDER) != null)
-			mGps = new GpsListener(mCtx, interval, this);
-		if (mLocMan.getProvider(LocationManager.NETWORK_PROVIDER) != null)
-			mNetwork = new NetworkListener(mCtx, interval, this);
-        mAppView = appView;
+	/**
+	 * Constructor.
+	 * 
+	 * @param id			Listener id
+	 * @param ctx
+	 * @param time			Sampling period in msec
+	 * @param appView
+	 */
+	GeoListener(GeoBroker broker, String id, int time) {
+		this.id = id;
+		this.interval = time;
+		this.broker = broker;
+		this.mGps = null;
+		this.mNetwork = null;
+		this.mLocMan = (LocationManager) broker.ctx.getSystemService(Context.LOCATION_SERVICE);
+
+		// If GPS provider, then create and start GPS listener
+		if (this.mLocMan.getProvider(LocationManager.GPS_PROVIDER) != null) {
+			this.mGps = new GpsListener(broker.ctx, time, this);
+		}
+		
+		// If network provider, then create and start network listener
+		if (this.mLocMan.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+			this.mNetwork = new NetworkListener(broker.ctx, time, this);
+		}
 	}
 	
-	void success(Location loc)
-	{
-		/*
-		 * We only need to figure out what we do when we succeed!
-		 */
+	/**
+	 * Destroy listener.
+	 */
+	public void destroy() {
+		this.stop();
+	}
+	
+	/**
+	 * Location found.  Send location back to JavaScript.
+	 * 
+	 * @param loc
+	 */
+	void success(Location loc) {
 		
-		String params; 
-		/*
-		 * Build the giant string to send back to Javascript!
-		 */
-		params = loc.getLatitude() + "," + loc.getLongitude() + ", " + loc.getAltitude() + "," + loc.getAccuracy() + "," + loc.getBearing();
-		params += "," + loc.getSpeed() + "," + loc.getTime();
-		if(id != "global")
-		{
-			mAppView.loadUrl("javascript:navigator._geo.success(" + id + "," +  params + ")");
-		}
-		else
-		{
-			mAppView.loadUrl("javascript:navigator.geolocation.gotCurrentPosition(" + params + ")");
+		String params = loc.getLatitude() + "," + loc.getLongitude() + ", " + loc.getAltitude() + 
+				"," + loc.getAccuracy() + "," + loc.getBearing() +
+		 		"," + loc.getSpeed() + "," + loc.getTime();
+		
+		if (id == "global") {
 			this.stop();
 		}
+		this.broker.sendJavascript("navigator._geo.success('" + id + "'," +  params + ");");
 	}
 	
-	void fail()
-	{
-		// Do we need to know why?  How would we handle this?
-		if (id != "global") {
-			mAppView.loadUrl("javascript:navigator._geo.fail(" + id + ")");
+	/**
+	 * Location failed.  Send error back to JavaScript.
+	 * 
+	 * @param code			The error code
+	 * @param msg			The error message
+	 */
+	void fail(int code, String msg) {
+		this.broker.sendJavascript("navigator._geo.fail('" + this.id + "', " + ", " + code + ", '" + msg + "');");
+		this.stop();
+	}
+	
+	/**
+	 * Start retrieving location.
+	 * 
+	 * @param interval
+	 */
+	void start(int interval) {
+		if (this.mGps != null) {
+			this.mGps.start(interval);
 		}
-		else
-		{
-			mAppView.loadUrl("javascript:navigator._geo.fail()");
+		if (this.mNetwork != null) {
+			this.mNetwork.start(interval);
+		}
+		if (this.mNetwork == null && this.mGps == null) {
+			this.fail(POSITION_UNAVAILABLE, "No location providers available.");
 		}
 	}
 	
-	void start(int interval)
-	{
-		if(mGps != null)
-			mGps.start(interval);
-		if(mNetwork != null)
-			mNetwork.start(interval);
-		if(mNetwork == null && mGps == null)
-		{
-			// Really, how the hell were you going to get the location???
-			mAppView.loadUrl("javascript:navigator._geo.fail()");
+	/**
+	 * Stop listening for location.
+	 */
+	void stop() {
+		if (this.mGps != null) {
+			this.mGps.stop();
 		}
-	}
-	
-	// This stops the listener
-	void stop()
-	{
-		if(mGps != null)
-			mGps.stop();
-		if(mNetwork != null)
-			mNetwork.stop();
+		if (this.mNetwork != null) {
+			this.mNetwork.stop();
+		}
 	}
 
 }

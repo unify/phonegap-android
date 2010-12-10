@@ -1,108 +1,139 @@
-package com.phonegap;
-/* License (MIT)
- * Copyright (c) 2008 Nitobi
- * website: http://phonegap.com
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * Software), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
  * 
- * THE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
  */
+package com.phonegap;
 
 import java.util.TimeZone;
-
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import com.phonegap.api.PhonegapActivity;
+import com.phonegap.api.Plugin;
+import com.phonegap.api.PluginResult;
 import android.content.Context;
-import android.net.Uri;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
-import android.webkit.WebView;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
 
-public class Device{
+public class Device extends Plugin {
 	
-	private static final String LOG_TAG = "PhoneGap";
-	/*
-	 * UUID, version and availability	
-	 */
-	public boolean droid = true;
-	public static String version = "0.91";
-	public static String platform = "Android";
-	public static String uuid;
-	private Context mCtx;
-    private WebView mAppView;
-    AudioPlayer audio; 
+	public static String phonegapVersion = "0.9.3";				// PhoneGap version
+	public static String platform = "Android";					// Device OS
+	public static String uuid;									// Device UUID
     
-	public Device(WebView appView, Context ctx) {
-        this.mCtx = ctx;
-        this.mAppView = appView;
-        uuid = getUuid();
+    /**
+     * Constructor.
+     */
+	public Device() {
     }
 	
-	public void beep(long pattern)
-	{
-		Uri ringtone = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-		Ringtone notification = RingtoneManager.getRingtone(mCtx, ringtone);
-		if (notification != null) { // This will be the case when the phone is set to silent for example
-			for (long i = 0; i < pattern; ++i)
-			{
-				notification.play();
+	/**
+	 * Sets the context of the Command. This can then be used to do things like
+	 * get file paths associated with the Activity.
+	 * 
+	 * @param ctx The context of the main Activity.
+	 */
+	public void setContext(PhonegapActivity ctx) {
+		super.setContext(ctx);
+        Device.uuid = getUuid();
+	}
+
+	/**
+	 * Executes the request and returns PluginResult.
+	 * 
+	 * @param action 		The action to execute.
+	 * @param args 			JSONArry of arguments for the plugin.
+	 * @param callbackId	The callback id used when calling back into JavaScript.
+	 * @return 				A PluginResult object with a status and message.
+	 */
+	public PluginResult execute(String action, JSONArray args, String callbackId) {
+		PluginResult.Status status = PluginResult.Status.OK;
+		String result = "";		
+	
+		try {
+			if (action.equals("getDeviceInfo")) {
+				JSONObject r = new JSONObject();
+				r.put("uuid", Device.uuid);
+				r.put("version", this.getOSVersion());
+				r.put("platform", Device.platform);
+				r.put("name", this.getProductName());
+				r.put("phonegap", Device.phonegapVersion);
+				//JSONObject pg = new JSONObject();
+				//pg.put("version", Device.phonegapVersion);
+				//r.put("phonegap", pg);
+				return new PluginResult(status, r);
 			}
+			return new PluginResult(status, result);
+		} catch (JSONException e) {
+			return new PluginResult(PluginResult.Status.JSON_EXCEPTION);
 		}
 	}
-	
-	public void vibrate(long pattern){
-        // Start the vibration, 0 defaults to half a second.
-		if (pattern == 0)
-			pattern = 500;
-        Vibrator vibrator = (Vibrator) mCtx.getSystemService(Context.VIBRATOR_SERVICE);
-        vibrator.vibrate(pattern);
+
+	/**
+	 * Identifies if action to be executed returns a value and should be run synchronously.
+	 * 
+	 * @param action	The action to execute
+	 * @return			T=returns value
+	 */
+	public boolean isSynch(String action) {
+		if (action.equals("getDeviceInfo")) {
+			return true;
+		}
+		return false;
+	}
+
+    //--------------------------------------------------------------------------
+    // LOCAL METHODS
+    //--------------------------------------------------------------------------
+		
+	/**
+	 * Get the OS name.
+	 * 
+	 * @return
+	 */
+	public String getPlatform()	{
+		return Device.platform;
 	}
 	
-	public String getPlatform()
-	{
-		return this.platform;
-	}
-	
-	public String getUuid()
-	{		
-		//TelephonyManager operator = (TelephonyManager) mCtx.getSystemService(Context.TELEPHONY_SERVICE);		
-		//String uuid = operator.getDeviceId();
-		String uuid = Settings.Secure.getString(mCtx.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
+	/**
+	 * Get the device's Universally Unique Identifier (UUID).
+	 * 
+	 * @return
+	 */
+	public String getUuid()	{		
+		String uuid = Settings.Secure.getString(this.ctx.getContentResolver(), android.provider.Settings.Secure.ANDROID_ID);
 		return uuid;
 	}
 
+	/**
+	 * Get the PhoneGap version.
+	 * 
+	 * @return
+	 */
+	public String getPhonegapVersion() {
+		return Device.phonegapVersion;
+	}	
+
 	public String getLine1Number(){
-	  TelephonyManager operator = (TelephonyManager)mCtx.getSystemService(Context.TELEPHONY_SERVICE);
+	  TelephonyManager operator = (TelephonyManager)this.ctx.getSystemService(Context.TELEPHONY_SERVICE);
 	  return operator.getLine1Number();
 	}
 	
 	public String getDeviceId(){
-	  TelephonyManager operator = (TelephonyManager)mCtx.getSystemService(Context.TELEPHONY_SERVICE);
+	  TelephonyManager operator = (TelephonyManager)this.ctx.getSystemService(Context.TELEPHONY_SERVICE);
 	  return operator.getDeviceId();
 	}
 	
 	public String getSimSerialNumber(){
-	  TelephonyManager operator = (TelephonyManager)mCtx.getSystemService(Context.TELEPHONY_SERVICE);
+	  TelephonyManager operator = (TelephonyManager)this.ctx.getSystemService(Context.TELEPHONY_SERVICE);
 	  return operator.getSimSerialNumber();
   }
   
 	public String getSubscriberId(){
-	  TelephonyManager operator = (TelephonyManager)mCtx.getSystemService(Context.TELEPHONY_SERVICE);
+	  TelephonyManager operator = (TelephonyManager)this.ctx.getSystemService(Context.TELEPHONY_SERVICE);
 	  return operator.getSubscriberId();
 	}
 	
@@ -116,21 +147,23 @@ public class Device{
 		String productname = android.os.Build.PRODUCT;
 		return productname;
 	}
-	public String getOSVersion()
-	{
+	
+	/**
+	 * Get the OS version.
+	 * 
+	 * @return
+	 */
+	public String getOSVersion() {
 		String osversion = android.os.Build.VERSION.RELEASE;
 		return osversion;
 	}
+	
 	public String getSDKVersion()
 	{
 		String sdkversion = android.os.Build.VERSION.SDK;
 		return sdkversion;
 	}
 	
-	public String getVersion()
-	{
-		return version;
-	}	
     
     public String getTimeZoneID() {
        TimeZone tz = TimeZone.getDefault();

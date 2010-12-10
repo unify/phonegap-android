@@ -1,106 +1,151 @@
-package com.phonegap;
-/* License (MIT)
- * Copyright (c) 2008 Nitobi
- * website: http://phonegap.com
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
  * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
- * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
  */
+package com.phonegap;
+
+import com.phonegap.api.PhonegapActivity;
+
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationManager;
 import android.location.LocationListener;
 import android.os.Bundle;
-import android.util.Log;
 
+/**
+ * This class handles requests for GPS location services.
+ *
+ */
 public class GpsListener implements LocationListener {
 	
-	private Context mCtx;
-	private Location cLoc;
-	private LocationManager mLocMan;
-	private static final String LOG_TAG = "PhoneGap";
-	private GeoListener owner;
-	private boolean hasData = false;
+	private PhonegapActivity mCtx;				// PhonegapActivity object
 	
-	public GpsListener(Context ctx, int interval, GeoListener m)
-	{
-		owner = m;
-		mCtx = ctx;
+	private LocationManager mLocMan;			// Location manager object
+	private GeoListener owner;					// Geolistener object (parent)
+	private boolean hasData = false;			// Flag indicates if location data is available in cLoc
+	private Location cLoc;						// Last recieved location
+	private boolean running = false;			// Flag indicates if listener is running
+	
+	/**
+	 * Constructor.  
+	 * Automatically starts listening.
+	 * 
+	 * @param ctx
+	 * @param interval
+	 * @param m
+	 */
+	public GpsListener(PhonegapActivity ctx, int interval, GeoListener m) {
+		this.owner = m;
+		this.mCtx = ctx;
+		this.mLocMan = (LocationManager) this.mCtx.getSystemService(Context.LOCATION_SERVICE);
+		this.running = false;
 		this.start(interval);
 	}
 	
-	public Location getLocation()
-	{
-		cLoc = mLocMan.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-		hasData = true;
-		return cLoc;
+	/**
+	 * Get last location.
+	 * 
+	 * @return 				Location object
+	 */
+	public Location getLocation() {
+		this.cLoc = this.mLocMan.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+		if (this.cLoc != null) {
+			this.hasData = true;
+		}
+		return this.cLoc;
 	}
 	
+	/**
+	 * Called when the provider is disabled by the user.
+	 * 
+	 * @param provider
+	 */
 	public void onProviderDisabled(String provider) {
-		// TODO Auto-generated method stub
-		Log.d(LOG_TAG, "The provider " + provider + " is disabled");
-		owner.fail();
+		this.owner.fail(GeoListener.POSITION_UNAVAILABLE, "GPS provider disabled.");
 	}
 
+	/**
+	 * Called when the provider is enabled by the user.
+	 * 
+	 * @param provider
+	 */
 	public void onProviderEnabled(String provider) {
-		// TODO Auto-generated method stub
-		Log.d(LOG_TAG, "The provider "+ provider + " is enabled");
+		System.out.println("GpsListener: The provider "+ provider + " is enabled");
 	}
 
-
+	/**
+	 * Called when the provider status changes. This method is called when a 
+	 * provider is unable to fetch a location or if the provider has recently 
+	 * become available after a period of unavailability.
+	 * 
+	 * @param provider
+	 * @param status
+	 * @param extras
+	 */
 	public void onStatusChanged(String provider, int status, Bundle extras) {
-		// TODO Auto-generated method stub
-		Log.d(LOG_TAG, "The status of the provider " + provider + " has changed");
-		if(status == 0)
-		{
-			Log.d(LOG_TAG, provider + " is OUT OF SERVICE");
-			owner.fail();
+		System.out.println("GpsListener: The status of the provider " + provider + " has changed");
+		if (status == 0) {
+			System.out.println("GpsListener: " + provider + " is OUT OF SERVICE");
+			this.owner.fail(GeoListener.POSITION_UNAVAILABLE, "GPS out of service.");
 		}
-		else if(status == 1)
-		{
-			Log.d(LOG_TAG, provider + " is TEMPORARILY_UNAVAILABLE");
+		else if (status == 1) {
+			System.out.println("GpsListener: " + provider + " is TEMPORARILY_UNAVAILABLE");
 		}
-		else
-		{
-			Log.d(LOG_TAG, provider + " is Available");
+		else {
+			System.out.println("GpsListener: " + provider + " is Available");
 		}
 	}
 
-
+	/**
+	 * Called when the location has changed.
+	 * 
+	 * @param location
+	 */
 	public void onLocationChanged(Location location) {
-		Log.d(LOG_TAG, "The location has been updated!");
-		owner.success(location);
+		System.out.println("GpsListener: The location has been updated!");
+		this.hasData = true;
+		this.cLoc = location;
+		this.owner.success(location);
 	}
 
+	/**
+	 * Determine if location data is available.
+	 * 
+	 * @return
+	 */
 	public boolean hasLocation() {
-		return hasData;
+		return this.hasData;
 	}
 	
-	public void start(int interval)
-	{
-		mLocMan = (LocationManager) mCtx.getSystemService(Context.LOCATION_SERVICE);
-		mLocMan.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval, 0, this);
-		cLoc = mLocMan.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+	/**
+	 * Start requesting location updates.
+	 * 
+	 * @param interval
+	 */
+	public void start(int interval) {
+		if (!this.running) {
+			this.running = true;
+			this.mLocMan.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval, 0, this);
+			this.getLocation();
+
+			// If GPS provider has data, then send now
+			if (this.hasData) {
+				this.owner.success(this.cLoc);
+			}
+		}
 	}
 
-	public void stop()
-	{
-		mLocMan.removeUpdates(this);
+	/**
+	 * Stop receiving location updates.
+	 */
+	public void stop() {
+		if (this.running) {
+			this.mLocMan.removeUpdates(this);
+		}
+		this.running = false;
 	}
 	
 }

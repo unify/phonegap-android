@@ -1,31 +1,65 @@
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
+ * 
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
+ */
 package com.phonegap;
 
 import java.io.File;
+import java.util.Date;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.os.Environment;
 import android.os.StatFs;
 import android.util.Log;
 
+/**
+ * This class provides file directory utilities.  
+ * All file operations are performed on the SD card.
+ *   
+ * It is used by the FileUtils class.
+ */
 public class DirectoryManager {
 	
-	protected static boolean testFileExists (String name){
+	private static final String LOG_TAG = "DirectoryManager";
+
+	/**
+	 * Determine if a file or directory exists.
+	 * 
+	 * @param name				The name of the file to check.
+	 * @return					T=exists, F=not found
+	 */
+	protected static boolean testFileExists(String name) {
 		boolean status;
-		if ((testSaveLocationExists())&&(!name.equals(""))){
+		
+		// If SD card exists
+		if ((testSaveLocationExists()) && (!name.equals(""))) {
     		File path = Environment.getExternalStorageDirectory();
             File newPath = constructFilePaths(path.toString(), name);
             status = newPath.exists();
-    	}else{
+    	}
+		// If no SD card
+		else{
     		status = false;
     	}
 		return status;
 	}
 	
-	protected static long getFreeDiskSpace(){
-		/*
-		 * gets the available SD card free space or returns -1 if the SD card is not mounted.
-		 */
+	/**
+	 * Get the free disk space on the SD card
+	 * 
+	 * @return 		Size in KB or -1 if not available
+	 */
+	protected static long getFreeDiskSpace() {
 		String status = Environment.getExternalStorageState();
 		long freeSpace = 0;
+		
+		// If SD card exists
 		if (status.equals(Environment.MEDIA_MOUNTED)) {
 			try {
 				File path = Environment.getExternalStorageDirectory();
@@ -34,44 +68,82 @@ public class DirectoryManager {
 				long availableBlocks = stat.getAvailableBlocks();
 				freeSpace = availableBlocks*blockSize/1024;
 			} catch (Exception e) {e.printStackTrace(); }
-		} else { return -1; }
+		} 
+		
+		// If no SD card, then return -1
+		else { 
+			return -1; 
+		}
+		
 		return (freeSpace);
 	}	
 	
-	protected static boolean createDirectory(String directoryName){
+	/**
+	 * Create directory on SD card.
+	 * 
+	 * @param directoryName		The name of the directory to create.
+	 * @return 					T=successful, F=failed
+	 */
+	protected static boolean createDirectory(String directoryName) {
 		boolean status;
-		if ((testSaveLocationExists())&&(!directoryName.equals(""))){
+		
+		// Make sure SD card exists
+		if ((testSaveLocationExists()) && (!directoryName.equals(""))) {
 			File path = Environment.getExternalStorageDirectory();
             File newPath = constructFilePaths(path.toString(), directoryName);
 			status = newPath.mkdir();
 			status = true;
-		}else
+		}
+		
+		// If no SD card or invalid dir name
+		else {
 			status = false;
+		}
 		return status;
 	}
 	
-	protected static boolean testSaveLocationExists(){
+	/**
+	 * Determine if SD card exists.
+	 * 
+	 * @return				T=exists, F=not found
+	 */
+	protected static boolean testSaveLocationExists() {
 		String sDCardStatus = Environment.getExternalStorageState();
 		boolean status;
-		if (sDCardStatus.equals(Environment.MEDIA_MOUNTED)){
+		
+		// If SD card is mounted
+		if (sDCardStatus.equals(Environment.MEDIA_MOUNTED)) {
 			status = true;
-		}else
+		}
+		
+		// If no SD card
+		else {
 			status = false;
+		}
 		return status;
 	}
 	
-	protected static boolean deleteDirectory(String fileName){
+	/**
+	 * Delete directory.
+	 * 
+	 * @param fileName		The name of the directory to delete
+	 * @return				T=deleted, F=could not delete
+	 */
+	protected static boolean deleteDirectory(String fileName) {
 		boolean status;
 		SecurityManager checker = new SecurityManager();
 			
-		if ((testSaveLocationExists())&&(!fileName.equals(""))){
-		
+		// Make sure SD card exists
+		if ((testSaveLocationExists()) && (!fileName.equals(""))) {	
 			File path = Environment.getExternalStorageDirectory();
             File newPath = constructFilePaths(path.toString(), fileName);
 			checker.checkDelete(newPath.toString());
-			if(newPath.isDirectory()){
+			
+			// If dir to delete is really a directory
+			if (newPath.isDirectory()) {
 				String[] listfile = newPath.list();
-				// delete all files within the specified directory and then delete the directory
+				
+				// Delete all files within the specified directory and then delete the directory
 				try{
 					for (int i=0; i < listfile.length; i++){
 						File deletedFile = new File (newPath.toString()+"/"+listfile[i].toString());
@@ -80,27 +152,43 @@ public class DirectoryManager {
 					newPath.delete();
 					Log.i("DirectoryManager deleteDirectory", fileName);
 					status = true;
-				}catch (Exception e){
+				}
+				catch (Exception e){
 					e.printStackTrace();
 					status = false;
 				}
-				
-			}else
+			}
+			
+			// If dir not a directory, then error
+			else {
 				status = false;
-		}else
+			}
+		}
+		
+		// If no SD card 
+		else {
 			status = false;
+		}
 		return status;
 	}
 	
-	protected static boolean deleteFile(String fileName){
+	/**
+	 * Delete file.
+	 * 
+	 * @param fileName				The name of the file to delete
+	 * @return						T=deleted, F=not deleted
+	 */
+	protected static boolean deleteFile(String fileName) {
 		boolean status;
 		SecurityManager checker = new SecurityManager();
 			
-		if ((testSaveLocationExists())&&(!fileName.equals(""))){
-		
+		// Make sure SD card exists
+		if ((testSaveLocationExists()) && (!fileName.equals(""))) {
 			File path = Environment.getExternalStorageDirectory();
             File newPath = constructFilePaths(path.toString(), fileName);
 			checker.checkDelete(newPath.toString());
+			
+			// If file to delete is really a file
 			if (newPath.isFile()){
 				try {
 					Log.i("DirectoryManager deleteFile", fileName);
@@ -110,17 +198,76 @@ public class DirectoryManager {
 					se.printStackTrace();
 					status = false;
 				}
-			}else
+			}
+			// If not a file, then error
+			else {
 				status = false;
-		}else
+			}
+		}
+		
+		// If no SD card
+		else {
 			status = false;
+		}
 		return status;
 	}
 	
-	private static File constructFilePaths (String file1, String file2){
+	/**
+	 * Create a new file object from two file paths.
+	 * 
+	 * @param file1			Base file path
+	 * @param file2			Remaining file path
+	 * @return				File object
+	 */
+	private static File constructFilePaths (String file1, String file2) {
 		File newPath;
-		newPath = new File(file1+"/"+file2);
+		if (file2.startsWith(file1)) {
+			newPath = new File(file2);
+		}
+		else {
+			newPath = new File(file1+"/"+file2);
+		}
 		return newPath;
+	}
+
+	/**
+	 * This method will determine the file properties of the file specified
+	 * by the filePath.  Creates a JSONObject with name, lastModifiedDate and 
+	 * size properties.
+	 * 
+	 * @param filePath the file to get the properties of
+	 * @return a JSONObject with the files properties
+	 */
+	protected static JSONObject getFile(String filePath) {
+		File fp = new File(filePath);
+		
+		JSONObject obj = new JSONObject();
+		try {
+			obj.put("name", fp.getAbsolutePath());
+			obj.put("lastModifiedDate", new Date(fp.lastModified()).toString());
+			obj.put("size", fp.length());
+		}
+		catch (JSONException e) {
+			Log.e(LOG_TAG, e.getMessage(), e);
+		}
+		
+		return obj;
+	}
+
+	/**
+	 * This method returns a JSONArray of file paths.  Android's default 
+	 * location where files can be written is Environment.getExternalStorageDirectory().
+	 * We are returning a array with one element so the interface can remain 
+	 * consistent with BlackBerry as they have two areas where files can be 
+	 * written.
+	 * 
+	 * @return an array of file paths
+	 */
+	protected static JSONArray getRootPaths() {
+        JSONArray retVal = new JSONArray();
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/";
+        retVal.put(path);
+		return retVal;
 	}
 
 }

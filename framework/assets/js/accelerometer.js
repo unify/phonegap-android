@@ -1,100 +1,118 @@
-function Acceleration(x, y, z)
-{
+/*
+ * PhoneGap is available under *either* the terms of the modified BSD license *or* the
+ * MIT License (2008). See http://opensource.org/licenses/alphabetical for full text.
+ *
+ * Copyright (c) 2005-2010, Nitobi Software Inc.
+ * Copyright (c) 2010, IBM Corporation
+ */
+
+function Acceleration(x, y, z) {
   this.x = x;
   this.y = y;
   this.z = z;
   this.timestamp = new Date().getTime();
-  this.win = null;
-  this.fail = null;
-}
-
-var accelListeners = [];
+};
 
 /**
  * This class provides access to device accelerometer data.
  * @constructor
  */
 function Accelerometer() {
-	/**
-	 * The last known acceleration.
-	 */
-	this.lastAcceleration = null;
-}
+
+    /**
+     * The last known acceleration.  type=Acceleration()
+     */
+    this.lastAcceleration = null;
+
+    /**
+     * List of accelerometer watch timers
+     */
+    this.timers = {};
+};
+
+Accelerometer.ERROR_MSG = ["Not running", "Starting", "", "Failed to start"];
 
 /**
  * Asynchronously aquires the current acceleration.
- * @param {Function} successCallback The function to call when the acceleration
- * data is available
- * @param {Function} errorCallback The function to call when there is an error 
- * getting the acceleration data.
- * @param {AccelerationOptions} options The options for getting the accelerometer data
- * such as timeout.
+ *
+ * @param {Function} successCallback    The function to call when the acceleration data is available
+ * @param {Function} errorCallback      The function to call when there is an error getting the acceleration data. (OPTIONAL)
+ * @param {AccelerationOptions} options The options for getting the accelerometer data such as timeout. (OPTIONAL)
  */
 Accelerometer.prototype.getCurrentAcceleration = function(successCallback, errorCallback, options) {
-	// If the acceleration is available then call success
-	// If the acceleration is not available then call error
 
-	// Created for iPhone, Iphone passes back _accel obj litteral
-	if (typeof successCallback == "function") {
-		if(this.lastAcceleration)
-		  successCallback(accel);
-		else
-		{
-			watchAcceleration(this.gotCurrentAcceleration, this.fail);
-		}
-	}
-}
-
-
-Accelerometer.prototype.gotCurrentAcceleration = function(key, x, y, z)
-{
-    var a = new Acceleration(x,y,z);
-    a.x = x;
-    a.y = y;
-    a.z = z;
-    a.win = accelListeners[key].win;
-    a.fail = accelListeners[key].fail;
-    this.timestamp = new Date().getTime();
-    this.lastAcceleration = a;
-    accelListeners[key] = a;
-    if (typeof a.win == "function") {
-      a.win(a);
+    // successCallback required
+    if (typeof successCallback != "function") {
+        console.log("Accelerometer Error: successCallback is not a function");
+        return;
     }
-}
 
+    // errorCallback optional
+    if (errorCallback && (typeof errorCallback != "function")) {
+        console.log("Accelerometer Error: errorCallback is not a function");
+        return;
+    }
+
+    // Get acceleration
+    PhoneGap.exec(successCallback, errorCallback, "Accelerometer", "getAcceleration", []);
+};
 
 /**
  * Asynchronously aquires the acceleration repeatedly at a given interval.
- * @param {Function} successCallback The function to call each time the acceleration
- * data is available
- * @param {Function} errorCallback The function to call when there is an error 
- * getting the acceleration data.
- * @param {AccelerationOptions} options The options for getting the accelerometer data
- * such as timeout.
+ *
+ * @param {Function} successCallback    The function to call each time the acceleration data is available
+ * @param {Function} errorCallback      The function to call when there is an error getting the acceleration data. (OPTIONAL)
+ * @param {AccelerationOptions} options The options for getting the accelerometer data such as timeout. (OPTIONAL)
+ * @return String                       The watch id that must be passed to #clearWatch to stop watching.
  */
-
 Accelerometer.prototype.watchAcceleration = function(successCallback, errorCallback, options) {
-	// TODO: add the interval id to a list so we can clear all watches
-  var frequency = (options != undefined)? options.frequency : 10000;
-  var accel = Acceleration(0,0,0);
-  accel.win = successCallback;
-  accel.fail = errorCallback;
-  accel.opts = options;
-  var key = accelListeners.push( accel ) - 1;
-  Accel.start(frequency, key);
-}
+
+    // Default interval (10 sec)
+    var frequency = (options != undefined)? options.frequency : 10000;
+
+    // successCallback required
+    if (typeof successCallback != "function") {
+        console.log("Accelerometer Error: successCallback is not a function");
+        return;
+    }
+
+    // errorCallback optional
+    if (errorCallback && (typeof errorCallback != "function")) {
+        console.log("Accelerometer Error: errorCallback is not a function");
+        return;
+    }
+
+    // Make sure accelerometer timeout > frequency + 10 sec
+    PhoneGap.exec(
+        function(timeout) {
+            if (timeout < (frequency + 10000)) {
+                PhoneGap.exec(null, null, "Accelerometer", "setTimeout", [frequency + 10000]);
+            }
+        },
+        function(e) { }, "Accelerometer", "getTimeout", []);
+
+    // Start watch timer
+    var id = PhoneGap.createUUID();
+    navigator.accelerometer.timers[id] = setInterval(function() {
+        PhoneGap.exec(successCallback, errorCallback, "Accelerometer", "getAcceleration", []);
+    }, (frequency ? frequency : 1));
+
+    return id;
+};
 
 /**
  * Clears the specified accelerometer watch.
- * @param {String} watchId The ID of the watch returned from #watchAcceleration.
+ *
+ * @param {String} id       The id of the watch returned from #watchAcceleration.
  */
-Accelerometer.prototype.clearWatch = function(watchId) {
-	Accel.stop(watchId);
-}
+Accelerometer.prototype.clearWatch = function(id) {
 
-Accelerometer.prototype.epicFail = function(watchId, message) {
-  accelWatcher[key].fail();
-}
+    // Stop javascript timer & remove from timer list
+    if (id && navigator.accelerometer.timers[id] != undefined) {
+        clearInterval(navigator.accelerometer.timers[id]);
+        delete navigator.accelerometer.timers[id];
+    }
+};
 
 PhoneGap.addConstructor(function() {
     if (typeof navigator.accelerometer == "undefined") navigator.accelerometer = new Accelerometer();
